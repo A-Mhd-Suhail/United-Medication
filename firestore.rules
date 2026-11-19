@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// United Medication — Firestore security rules.
+//
+// Principles
+//  - Nothing is public: every read and write needs a signed-in user.
+//  - A user document can only be created for yourself, only with a self-service
+//    role (never "admin"), and its role can never be changed afterwards.
+//  - Patients only read records that belong to them (patientId == their uid).
+//    Doctors, hospitals and the administrator read clinical records; caretakers
+//    read the records of the patients assigned to them.
+//
+// Known limits (need server-side work, not rules):
+//  - Roles are self-declared at registration, so doctor/hospital accounts are not
+//    verified. Add a Cloud Function that verifies registration numbers and sets a
+//    custom claim, then replace role() with request.auth.token.role.
+//  - The administrator is identified by sign-in email; the admin credential is
+//    still checked in the browser (see src/auth/session.ts).
+//  - Doctor access to a patient's records is not limited by the patient's consent
+//    (consent is enforced in the UI only).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function role() { return me().role; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'admin.official@mhdhospital.in'; }
+    function isStaff() { return signedIn() && role() in ['doctor', 'hospital', 'admin']; }
+    function isCaretaker() { return signedIn() && role() == 'caretaker'; }
+    function roleUnchanged() { return request.resource.data.role == resource.data.role; }
+
+    // ---------- users ----------
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        uid() == userId
+        // directory entries any signed-in user may look up (booking, assignments)
+        || resource.data.role in ['doctor', 'hospital', 'caretaker']
+        || isStaff()
+        // a caretaker reads the patients assigned to them
+        || resource.data.get('caretakerAssignment', {}).get('caretakerId', '') == uid()
+        || (isCaretaker() && me().get('caretakerPatientId', '') == userId)
+      );
+
+      allow create: if signedIn() && (
+        (uid() == userId && request.resource.data.role in ['patient', 'caretaker', 'doctor', 'hospital'])
+        || (uid() == userId && isAdmin() && request.resource.data.role == 'admin')
+        // the caretaker demo account seeds its sample patient
+        || (userId == 'caretaker-demo-patient' && isCaretaker())
+      );
+
+      allow update: if signedIn() && roleUnchanged() && (uid() == userId || isStaff() || isCaretaker());
+      allow delete: if signedIn() && uid() == userId;
+    }
+
+    // ---------- records owned by a patient ----------
+    match /{coll}/{docId} {
+      allow read: if signedIn() && coll in ['cases', 'medicines', 'appointments', 'timeline', 'bills', 'reports', 'vitals', 'activity', 'accessLog']
+        && (resource.data.get('patientId', '') == uid() || isStaff() || isCaretaker());
+      allow create: if signedIn() && coll in ['cases', 'medicines', 'appointments', 'timeline', 'bills', 'reports', 'vitals', 'activity', 'accessLog']
+        && (request.resource.data.get('patientId', '') == uid() || isStaff() || isCaretaker());
+      allow update, delete: if signedIn() && coll in ['cases', 'medicines', 'appointments', 'timeline', 'bills', 'reports', 'vitals', 'activity', 'accessLog']
+        && (resource.data.get('patientId', '') == uid() || isStaff() || isCaretaker());
+    }
+
+    // ---------- notifications: addressed to a uid or to "role:<role>" ----------
+    match /notifications/{id} {
+      allow read, update, delete: if signedIn() && resource.data.to in [uid(), 'role:' + role()];
+      allow create: if signedIn();
+    }
+
+    // ---------- chat: only the two participants (thread id is "<uidA>_<uidB>") ----------
+    match /threads/{tid} {
+      allow read, write: if signedIn() && uid() in tid.split('_');
+      match /m/{mid} {
+        allow read, write: if signedIn() && uid() in tid.split('_');
+      }
+    }
+
+    // ---------- consent: "<patientUid>_<doctorUid>"; the patient controls it ----------
+    match /consents/{cid} {
+      allow read: if signedIn() && uid() in cid.split('_');
+      allow write: if signedIn() && cid.split('_')[0] == uid();
+    }
+
+    // ---------- shared operational data ----------
+    match /slots/{id} { allow read, write: if signedIn(); }
+    match /hospital_requests/{id} { allow read, write: if signedIn(); }
+    match /system/counters { allow read, write: if signedIn(); }
+
+    // ---------- WebAuthn data: Cloud Functions (Admin SDK) only ----------
+    match /webauthnCredentials/{id} { allow read, write: if false; }
+    match /webauthnChallenges/{id} { allow read, write: if false; }
+
+    // everything else is denied by default
+  }
+}
