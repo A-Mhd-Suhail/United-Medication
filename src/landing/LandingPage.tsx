@@ -152,7 +152,7 @@ export default function LandingPage({ onLogin, onSignup, onDemo, onAdmin, authLo
 
       {/* 1 — Cinematic hero: a grand hospital reception, one centred statement, one action */}
       <header className="on-dark relative isolate flex min-h-[100svh] items-center justify-center overflow-hidden bg-black pt-[72px] text-white">
-        <img src="./img/hospital-lobby.webp" alt="United Medication hospital lobby at sunset, with a marble reception desk, glass walls and a glowing oval ceiling"
+        <img src="./img/hospital-lobby.webp" srcSet="./img/hospital-lobby-1280.webp 1280w, ./img/hospital-lobby.webp 2000w" sizes="100vw" alt="United Medication hospital lobby at sunset, with a marble reception desk, glass walls and a glowing oval ceiling"
           width={2000} height={1125} fetchPriority="high" decoding="async"
           className="absolute inset-0 -z-30 h-full w-full object-cover object-[50%_42%]" />
         {/* Overlay: even base so the architecture stays legible, a soft pool behind the type, nav and floor fades, warm champagne ambience */}

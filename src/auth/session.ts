@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { auth, db } from '../firebase';
-import {
-  signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signOut, onAuthStateChanged,
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { loginWithFingerprint } from '../lib/fingerprint';
+/** Firebase is loaded on demand: the public landing page must not pay for it. */
+const fb = () => import('./fb');
+const HINT = 'um_session';
 import { toast } from '../components/Toaster';
 import { uid6, errMsg } from '../lib/format';
 import { curLang } from '../lib/i18n';
@@ -59,16 +55,36 @@ export function useSession() {
 
   // Restore the active portal after a refresh from Firebase's persisted session;
   // the role always comes from the user's Firestore profile, never from local storage.
-  useEffect(() => onAuthStateChanged(auth, async (user) => {
-    if (!user) { setLoggedIn(null); setAuthReady(true); return; }
-    try {
-      const snap = await getDoc(doc(db, 'users', user.uid));
-      const role = snap.data()?.role as PortalType | undefined;
-      setLoggedIn(role ?? null);
-    } catch {
-      setLoggedIn(null);
-    } finally { setAuthReady(true); }
-  }), []);
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    let cancelled = false;
+    let returning = false;
+    try { returning = localStorage.getItem(HINT) === '1'; } catch { /* storage may be blocked */ }
+    // New visitors see the landing page immediately; only returning users wait for their session.
+    if (!returning) setAuthReady(true);
+
+    const start = async () => {
+      const { auth, db, onAuthStateChanged, doc, getDoc } = await fb();
+      if (cancelled) return;
+      off = onAuthStateChanged(auth, async (user) => {
+        try { user ? localStorage.setItem(HINT, '1') : localStorage.removeItem(HINT); } catch { /* storage may be blocked */ }
+        if (!user) { setLoggedIn(null); setAuthReady(true); return; }
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          setLoggedIn((snap.data()?.role as PortalType | undefined) ?? null);
+        } catch {
+          setLoggedIn(null);
+        } finally { setAuthReady(true); }
+      });
+    };
+    // Returning users: now. Everyone else: after the landing page has painted.
+    const idle = (window as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined;
+    const handle = returning ? (void start(), 0) : idle ? idle(() => void start(), { timeout: 3000 }) : window.setTimeout(() => void start(), 1200);
+    return () => {
+      cancelled = true; off?.();
+      if (!returning) { (window as any).cancelIdleCallback?.(handle); window.clearTimeout(handle); }
+    };
+  }, []);
 
   // Registration fields (MHD patient form is the full medical intake)
   const [f, setF] = useState<Record<string, string>>({});
@@ -86,6 +102,7 @@ export function useSession() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence, signOut, doc, setDoc, getDoc } = await fb();
     setAuthError('');
     if (!portal) return;
 
@@ -143,6 +160,7 @@ export function useSession() {
   };
 
   const handleForgot = async () => {
+    const { auth, sendPasswordResetEmail } = await fb();
     if (!email.trim()) { toast('Enter your email above first, then tap Forgot password.', 'info'); return; }
     try {
       await sendPasswordResetEmail(auth, email.trim());
@@ -153,6 +171,7 @@ export function useSession() {
   };
 
   const handleDummyFingerprintLogin = async () => {
+    const { loginWithFingerprint } = await fb();
     if (portal !== 'patient') return;
     setAuthError('');
     if (!email.trim()) {
@@ -174,6 +193,7 @@ export function useSession() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { auth, db, createUserWithEmailAndPassword, doc, setDoc } = await fb();
     setAuthError('');
     if (!portal) return;
     const passOk = f.password && f.password.length >= 6;
@@ -237,6 +257,7 @@ export function useSession() {
   };
 
   const quickDemo = async (role: PortalType) => {
+    const { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence, doc, setDoc } = await fb();
     const d = DEMO[role];
     if (!d) return;
     setAuthLoading(true);
