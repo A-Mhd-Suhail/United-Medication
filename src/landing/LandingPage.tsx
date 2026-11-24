@@ -151,10 +151,10 @@ export default function LandingPage({ onLogin, onSignup, onDemo, onAdmin, authLo
       <MegaMenu onLogin={openPortal} onInfo={setInfo} />
 
       {/* 1 — Cinematic hero: a grand hospital reception, one centred statement, one action */}
-      <header className="on-dark relative isolate flex min-h-[84svh] items-center justify-center overflow-hidden bg-black pt-[72px] text-white">
-        <img src="./img/hospital-reception.jpg" alt="Grand hospital reception hall with timber screens, glass walls and an oval skylight ceiling"
-          width={2400} height={1346} fetchPriority="high" decoding="async"
-          className="absolute inset-0 -z-30 h-full w-full object-cover object-[50%_30%]" />
+      <header className="on-dark relative isolate flex min-h-[100svh] items-center justify-center overflow-hidden bg-black pt-[72px] text-white">
+        <img src="./img/hospital-lobby.webp" alt="United Medication hospital lobby at sunset, with a marble reception desk, glass walls and a glowing oval ceiling"
+          width={2000} height={1125} fetchPriority="high" decoding="async"
+          className="absolute inset-0 -z-30 h-full w-full object-cover object-[50%_42%]" />
         {/* Overlay: even base so the architecture stays legible, a soft pool behind the type, nav and floor fades, warm champagne ambience */}
         <div className="absolute inset-0 -z-20 bg-black/20" aria-hidden />
         <div className="absolute inset-0 -z-20 bg-[radial-gradient(ellipse_70%_56%_at_50%_44%,rgba(11,11,12,0.66),transparent_78%)]" aria-hidden />
