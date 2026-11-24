@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  ArrowLeft, ArrowRight, Bell, CalendarClock, CreditCard, FileText, Info, Languages, Lock, Mail, Pill, Search,
+  ArrowDown, ArrowLeft, ArrowRight, Bell, CalendarClock, CreditCard, FileText, Info, Languages, Lock, Mail, Pill, Search,
   ShieldCheck, Siren, Stethoscope, Activity, ListChecks,
 } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -162,7 +162,7 @@ export default function LandingPage({ onLogin, onSignup, onDemo, onAdmin, authLo
         <div className="absolute inset-x-0 bottom-0 -z-20 h-1/4 bg-gradient-to-t from-black via-black/50 to-transparent" aria-hidden />
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_40%_at_50%_0%,rgba(216,193,139,0.16),transparent_70%)]" aria-hidden />
 
-        <div className="mx-auto flex w-full max-w-[1100px] flex-col items-center px-5 pb-16 pt-6 text-center sm:px-8 md:pb-24">
+        <div className="mx-auto flex w-full max-w-[1100px] flex-col items-center px-5 pb-24 pt-6 text-center sm:px-8">
           <p className="rise flex items-center justify-center gap-4 text-[11.5px] font-semibold uppercase leading-relaxed tracking-[0.2em] text-champagne [text-shadow:0_1px_16px_rgba(0,0,0,0.7)] sm:text-[13.5px] sm:tracking-[0.32em]" style={{ '--i': 0 } as CSSProperties}>
             <span className="hidden h-px w-10 bg-champagne/60 sm:block" aria-hidden />
             <span className="max-w-[32ch] sm:max-w-none">INTERNATIONALLY DIGITALISED HEALTHCARE NETWORK</span>
@@ -172,12 +172,17 @@ export default function LandingPage({ onLogin, onSignup, onDemo, onAdmin, authLo
             Healthcare Without <span className="text-champagne">Boundaries.</span>
           </h1>
           <p className="rise mt-6 text-[16px] tracking-[0.02em] text-white/75 sm:text-[19px]" style={{ '--i': 2 } as CSSProperties}>One network. Every health journey.</p>
-          <div className="rise mt-10" style={{ '--i': 3 } as CSSProperties}>
-            <button onClick={() => goTo('network')} className="btn btn-gold group !min-h-[54px] !px-9 text-[15px] hover:!shadow-[0_10px_30px_-12px_rgba(216,193,139,0.55)]">
-              Explore the Network <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
-            </button>
-          </div>
         </div>
+
+        {/* Scroll cue: a single curved pill anchored to the bottom of the hero */}
+        <button onClick={() => goTo('network')} aria-label="Scroll to explore"
+          className="rise group absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full border border-champagne/45 bg-black/35 py-2.5 pl-6 pr-2.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.2em] text-champagne backdrop-blur-md sm:text-[11.5px] sm:tracking-[0.28em] hover:border-champagne hover:bg-black/55 hover:text-white sm:bottom-10"
+          style={{ '--i': 4 } as CSSProperties}>
+          Scroll to explore
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-champagne/50 text-champagne transition-colors group-hover:border-champagne group-hover:bg-champagne group-hover:text-black">
+            <ArrowDown className="h-3.5 w-3.5 animate-bounce" aria-hidden />
+          </span>
+        </button>
       </header>
 
       {/* 1b — The five participants: a quiet horizontal index into the portals */}
